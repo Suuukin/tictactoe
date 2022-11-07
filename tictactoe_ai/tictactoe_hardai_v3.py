@@ -34,10 +34,13 @@ class State:
     square = None
     robot_active = False
     bot_turn = False
+    turn_count = 0
+
 
 # function to change label text cleaner
 def update_label(text):
     label.configure(text=text)
+
 
 # resets board and then sets O as starting character
 def start_O():
@@ -52,7 +55,6 @@ def bot_selector():
             easy_robot()
         elif State.robot_active == "Hard":
             hard_robot()
-            
 
 
 def easy_robot():
@@ -69,8 +71,71 @@ def easy_robot():
             button.set_square()
 
 
+class TwoInLine:
+    def __init__(self, p1, p2, p3):
+        # takes point from inputted rows
+        self.p1 = p1
+        self.p2 = p2
+        self.p3 = p3
+
+    def check(self, for_char):
+        p1_satisfied = False
+        p2_satisfied = False
+        p3_satisfied = False
+        # if X has all 3 points in the row
+        if for_char == "X":
+            for coord in State.X_points:
+                if coord.p == self.p1:
+                    p1_satisfied = True
+                elif coord.p == self.p2:
+                    p2_satisfied = True
+                elif coord.p == self.p3:
+                    p3_satisfied = True
+        # checks if O has all 3 points in the row
+        elif for_char == "O":
+            for coord in State.O_points:
+                if coord.p == self.p1:
+                    p1_satisfied = True
+                elif coord.p == self.p2:
+                    p2_satisfied = True
+                elif coord.p == self.p3:
+                    p3_satisfied = True
+        # returns results
+        return [p1_satisfied, p2_satisfied, p3_satisfied]
+
+
+two_in_line = [
+    TwoInLine((1, 1), (1, 2), (1, 3)),
+    TwoInLine((2, 1), (2, 2), (2, 3)),
+    TwoInLine((3, 1), (3, 2), (3, 3)),
+    TwoInLine((1, 1), (2, 1), (3, 1)),
+    TwoInLine((1, 2), (2, 2), (3, 2)),
+    TwoInLine((1, 3), (2, 3), (3, 3)),
+    TwoInLine((1, 1), (2, 2), (3, 3)),
+    TwoInLine((3, 1), (2, 2), (1, 3)),
+    ]
+
+
 def hard_robot():
-    return
+    if State.turn_count == 0:
+        button = State.buttons[2,2]
+        if button.value is None:
+            button.set_square()
+        else:
+            button = State.buttons[1, 1]
+            button.set_square()
+        State.turn_count += 1
+    elif State.turn_count == 1:
+        for line in two_in_line:
+            line_X = line.check("X")
+            line_Y = line.check("X")
+        State.turn_count += 1
+        
+        
+
+    #while State.bot_turn is True:
+    
+
 
 class Square:
     # using dunder init to make buttons
@@ -87,7 +152,7 @@ class Square:
             font=gridFont,
             pady=10,
         )
-    
+
     # operation that runs every time that a button is clicked
     def btn_op(self):
         # checks if game is over
