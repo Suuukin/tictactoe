@@ -41,10 +41,35 @@ def update_label(text):
 
 # resets board and then sets O as starting character
 def start_O():
-    reset_button()
+    reset_board()
     State.current_char = "O"
     update_label(f"Player {State.current_char} Turn")
 
+def bot_selector():
+    if State.game_over is False:
+        if State.robot_active == "Easy":
+            easy_robot()
+        elif State.robot_active == "Hard":
+            hard_robot()
+            
+
+
+def easy_robot():
+    while State.bot_turn is True:
+        # randomly generates a x,y point
+        x = random.randint(1, 3)
+        y = random.randint(1, 3)
+        # retrieves button from dict using the generated point
+        button = State.buttons[x, y]
+        print(x, y, button.value)
+        # checks if the button has been clicked before
+        if button.value is None:
+            # if empty square bot fills square and ends turn
+            button.set_square()
+
+
+def hard_robot():
+    return
 
 class Square:
     # using dunder init to make buttons
@@ -67,10 +92,8 @@ class Square:
         # checks if game is over
         if State.game_over is not True:
             self.set_square()
-            if State.game_over is not True:
-                if State.robot_active == "Easy":
-                    if State.bot_turn == True:
-                        self.easy_robot()
+            bot_selector()
+
 
     def set_square(self):
         # if button has been clicked before do nothing
@@ -91,21 +114,6 @@ class Square:
             # updates the label to be the current players turn
             update_label(f"Player {State.current_char} Turn")
         check_win()
-
-    def easy_robot(self):
-        # randomly generates a x,y point
-        x = random.randint(1, 3)
-        y = random.randint(1, 3)
-        # retrieves button from dict using the generated point
-        button = State.buttons[x, y]
-        print(x, y, button.value)
-        # checks if the button has been clicked before
-        if button.value is None:
-            # if empty square bot fills square and ends turn
-            button.set_square()
-        else:
-            # if square filled bot generates new number and tries again
-            self.easy_robot()
 
 
     def reset(self):
@@ -199,7 +207,7 @@ def check_win():
         State.game_over = True
 
 # each button resets itself clearing its value and text
-def reset_button():
+def reset_board():
     for State.square in State.buttons.values():
         State.square.reset()
     # update label and reset variables
@@ -211,9 +219,7 @@ def reset_button():
 
 # activates and deactivates easy bot
 def start_easy():
-    # reset the board
-    reset_button()
-    # if easy bot not active then activate
+    reset_board()
     if State.robot_active != "Easy":
         State.robot_active = "Easy"
         update_label("Easy Bot Active")
@@ -221,21 +227,35 @@ def start_easy():
     # if easy bot active then deactivate
         State.robot_active = False
         update_label("Easy Bot Disabled")
+
+def start_hard():
+    reset_board()
+    if State.robot_active != "Hard":
+        State.robot_active = "Hard"
+        update_label("Hard Bot Active")
+    else:
+        # if easy bot active then deactivate
+        State.robot_active = False
+        update_label("Hard Bot Disabled")
    
 
+
 # creating button to reset grid
-reset_btn = tk.Button(window, text="Reset", font=myFont, command=reset_button)
+reset_btn = tk.Button(window, text="Reset", font=myFont, command=reset_board)
 reset_btn.grid(row=2, column=0)
 
 # creating menubar
 menubar = tk.Menu(window)
 game_menu = tk.Menu(menubar, tearoff=0)
-game_menu.add_command(label="Reset Game", command=reset_button)
+game_menu.add_command(label="Reset Game", command=reset_board)
 game_menu.add_command(label="Start with O", command=start_O)
-game_menu.add_command(label="Activate Easy Bot", command=start_easy)
 game_menu.add_separator()
 game_menu.add_command(label="Exit", command=window.destroy)
+AI_menu = tk.Menu(menubar, tearoff=0)
+AI_menu.add_command(label="Activate Easy Bot", command=start_easy)
+AI_menu.add_command(label="Activate Hard Bot", command=start_hard)
 menubar.add_cascade(label="Game", menu=game_menu)
+menubar.add_cascade(label='AI', menu=AI_menu)
 
 window.config(menu=menubar)
 
