@@ -51,10 +51,11 @@ def start_O():
 
 def bot_selector():
     if State.game_over is False:
-        if State.robot_active == "Easy":
-            easy_robot()
-        elif State.robot_active == "Hard":
-            hard_robot()
+        if State.bot_turn is True:
+            if State.robot_active == "Easy":
+                easy_robot()
+            elif State.robot_active == "Hard":
+                hard_robot()
 
 
 def easy_robot():
@@ -78,30 +79,55 @@ class TwoInLine:
         self.p2 = p2
         self.p3 = p3
 
-    def check(self, for_char):
-        p1_satisfied = False
-        p2_satisfied = False
-        p3_satisfied = False
-        # if X has all 3 points in the row
-        if for_char == "X":
-            for coord in State.X_points:
-                if coord.p == self.p1:
-                    p1_satisfied = True
-                elif coord.p == self.p2:
-                    p2_satisfied = True
-                elif coord.p == self.p3:
-                    p3_satisfied = True
-        # checks if O has all 3 points in the row
-        elif for_char == "O":
-            for coord in State.O_points:
-                if coord.p == self.p1:
-                    p1_satisfied = True
-                elif coord.p == self.p2:
-                    p2_satisfied = True
-                elif coord.p == self.p3:
-                    p3_satisfied = True
+    def check(self):
+        X1_satisfied = False
+        X2_satisfied = False
+        X3_satisfied = False
+        O1_satisfied = False
+        O2_satisfied = False
+        O3_satisfied = False
+        self.last_square = None
+        for coord in State.O_points:
+            if coord.p == self.p1:
+                O1_satisfied = True
+            elif coord.p == self.p2:
+                O2_satisfied = True
+            elif coord.p == self.p3:
+                O3_satisfied = True
+        for coord in State.X_points:
+            if coord.p == self.p1:
+                X1_satisfied = True
+            elif coord.p == self.p2:
+                X2_satisfied = True
+            elif coord.p == self.p3:
+                X3_satisfied = True
         # returns results
-        return [p1_satisfied, p2_satisfied, p3_satisfied]
+        if O1_satisfied is True and O2_satisfied is True and X3_satisfied:
+            self.last_square = self.p3
+            print(self.last_square)
+            return self.last_square
+        if O2_satisfied is True and O3_satisfied is True and X1_satisfied:
+            self.last_square = self.p1
+            print(self.last_square)
+            return self.last_square
+        if O1_satisfied is True and O3_satisfied is True and X2_satisfied:
+            self.last_square = self.p2
+            print(self.last_square)
+            return self.last_square
+        if self.last_square is None:
+            print(self.last_square)
+            if X1_satisfied is True and X2_satisfied is True and X3_satisfied is False and O3_satisfied is False:
+                self.last_square = self.p3
+                print(self.last_square)
+                return self.last_square
+            if X2_satisfied is True and X3_satisfied is True and X1_satisfied is False and O1_satisfied is False:
+                self.last_square = self.p1
+                print(self.last_square)
+                return self.last_square
+            if X1_satisfied is True and X3_satisfied is True and X2_satisfied is False and O2_satisfied is False:
+                self.last_square = self.p2
+                print(self.last_square)
+                return self.last_square
 
 
 two_in_line = [
@@ -117,23 +143,27 @@ two_in_line = [
 
 
 def hard_robot():
-    if State.turn_count == 0:
-        button = State.buttons[2,2]
-        if button.value is None:
+    for line in two_in_line:
+        if State.bot_turn == True:
+            square_coord = line.check()
+            if square_coord is not None:
+                button = State.buttons[square_coord]
+                button.set_square()
+    if State.bot_turn == True:
+        if State.turn_count == 0:
+            button = State.buttons[2,2]
+            if button.value is None:
+                button.set_square()
+            else:
+                button = State.buttons[1, 1]
+                button.set_square()
+            State.turn_count += 1
+        elif State.turn_count == 1:
+            button = State.buttons[2,3]
             button.set_square()
-        else:
-            button = State.buttons[1, 1]
-            button.set_square()
-        State.turn_count += 1
-    elif State.turn_count == 1:
-        for line in two_in_line:
-            line_X = line.check("X")
-            line_Y = line.check("X")
-        State.turn_count += 1
-        
-        
-
-    #while State.bot_turn is True:
+            State.turn_count += 1
+        elif State.turn_count >= 2:
+            return
     
 
 
