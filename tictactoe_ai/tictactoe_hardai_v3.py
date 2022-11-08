@@ -35,6 +35,7 @@ class State:
     robot_active = False
     bot_turn = False
     turn_count = 0
+    center_O = False
 
 
 # function to change label text cleaner
@@ -102,32 +103,30 @@ class TwoInLine:
             elif coord.p == self.p3:
                 X3_satisfied = True
         # returns results
-        if O1_satisfied is True and O2_satisfied is True and X3_satisfied:
+        if O1_satisfied is True and O2_satisfied is True and X3_satisfied is False:
             self.last_square = self.p3
             print(self.last_square)
             return self.last_square
-        if O2_satisfied is True and O3_satisfied is True and X1_satisfied:
+        if O2_satisfied is True and O3_satisfied is True and X1_satisfied is False:
             self.last_square = self.p1
             print(self.last_square)
             return self.last_square
-        if O1_satisfied is True and O3_satisfied is True and X2_satisfied:
+        if O1_satisfied is True and O3_satisfied is True and X2_satisfied is False:
             self.last_square = self.p2
             print(self.last_square)
             return self.last_square
-        if self.last_square is None:
+        if X1_satisfied is True and X2_satisfied is True and X3_satisfied is False and O3_satisfied is False:
+            self.last_square = self.p3
             print(self.last_square)
-            if X1_satisfied is True and X2_satisfied is True and X3_satisfied is False and O3_satisfied is False:
-                self.last_square = self.p3
-                print(self.last_square)
-                return self.last_square
-            if X2_satisfied is True and X3_satisfied is True and X1_satisfied is False and O1_satisfied is False:
-                self.last_square = self.p1
-                print(self.last_square)
-                return self.last_square
-            if X1_satisfied is True and X3_satisfied is True and X2_satisfied is False and O2_satisfied is False:
-                self.last_square = self.p2
-                print(self.last_square)
-                return self.last_square
+            return self.last_square
+        if X2_satisfied is True and X3_satisfied is True and X1_satisfied is False and O1_satisfied is False:
+            self.last_square = self.p1
+            print(self.last_square)
+            return self.last_square
+        if X1_satisfied is True and X3_satisfied is True and X2_satisfied is False and O2_satisfied is False:
+            self.last_square = self.p2
+            print(self.last_square)
+            return self.last_square
 
 
 two_in_line = [
@@ -149,21 +148,30 @@ def hard_robot():
             if square_coord is not None:
                 button = State.buttons[square_coord]
                 button.set_square()
+                State.turn_count += 1
     if State.bot_turn == True:
         if State.turn_count == 0:
+            State.turn_count += 1
             button = State.buttons[2,2]
             if button.value is None:
                 button.set_square()
+                State.center_O = True
             else:
                 button = State.buttons[1, 1]
                 button.set_square()
-            State.turn_count += 1
+                State.center_O = False
+
         elif State.turn_count == 1:
-            button = State.buttons[2,3]
-            button.set_square()
             State.turn_count += 1
-        elif State.turn_count >= 2:
-            return
+            if State.center_O is True:
+                print (State.center_O)
+                button = State.buttons[2,3]
+                button.set_square()
+            else:
+                button = State.buttons[1,3]
+                button.set_square()
+
+        easy_robot()
     
 
 
