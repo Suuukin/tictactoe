@@ -24,9 +24,15 @@ label.grid(row=0, column=0)
 play_area = tk.Frame(window, width=300, height=30, bg="honeydew2")
 play_area.grid(row=1, column=0)
 
+
+
+MARKER_X = "X"
+MARKER_O = "O"
+EMPTY = " "
 # class to hold variables
 class State:
     current_char = "X"
+    board = {}
     X_points = []
     O_points = []
     game_over = False
@@ -35,7 +41,6 @@ class State:
     robot_active = False
     bot_turn = False
     turn_count = 0
-    center_O = False
 
 
 # function to change label text cleaner
@@ -76,6 +81,7 @@ def easy_robot():
 class TwoInLine:
     def __init__(self, p1, p2, p3):
         # takes point from inputted rows
+        self.points = [p1, p2, p3]
         self.p1 = p1
         self.p2 = p2
         self.p3 = p3
@@ -88,42 +94,45 @@ class TwoInLine:
         O2_satisfied = False
         O3_satisfied = False
         self.last_square = None
-        for coord in State.O_points:
-            if coord.p == self.p1:
-                O1_satisfied = True
-            elif coord.p == self.p2:
-                O2_satisfied = True
-            elif coord.p == self.p3:
-                O3_satisfied = True
-        for coord in State.X_points:
-            if coord.p == self.p1:
-                X1_satisfied = True
-            elif coord.p == self.p2:
-                X2_satisfied = True
-            elif coord.p == self.p3:
-                X3_satisfied = True
+        for coord in State.board:
+            button = State.buttons[coord]
+            value = button.value
+            if value == "O":
+                if button.p == self.p1:
+                    O1_satisfied = True
+                elif button.p == self.p2:
+                    O2_satisfied = True
+                elif button.p == self.p3:
+                    O3_satisfied = True
+            if value == "X":
+                if button.p == self.p1:
+                    X1_satisfied = True
+                elif button.p == self.p2:
+                    X2_satisfied = True
+                elif button.p == self.p3:
+                    X3_satisfied = True
         # returns results
-        if O1_satisfied is True and O2_satisfied is True and X3_satisfied is False:
+        if O1_satisfied and O2_satisfied and not X3_satisfied:
             self.last_square = self.p3
             print(self.last_square)
             return self.last_square
-        if O2_satisfied is True and O3_satisfied is True and X1_satisfied is False:
+        if O2_satisfied and O3_satisfied and not X1_satisfied:
             self.last_square = self.p1
             print(self.last_square)
             return self.last_square
-        if O1_satisfied is True and O3_satisfied is True and X2_satisfied is False:
+        if O1_satisfied and O3_satisfied and not X2_satisfied:
             self.last_square = self.p2
             print(self.last_square)
             return self.last_square
-        if X1_satisfied is True and X2_satisfied is True and X3_satisfied is False and O3_satisfied is False:
+        if X1_satisfied and X2_satisfied and not X3_satisfied and not O3_satisfied:
             self.last_square = self.p3
             print(self.last_square)
             return self.last_square
-        if X2_satisfied is True and X3_satisfied is True and X1_satisfied is False and O1_satisfied is False:
+        if X2_satisfied and X3_satisfied and not X1_satisfied and not O1_satisfied:
             self.last_square = self.p1
             print(self.last_square)
             return self.last_square
-        if X1_satisfied is True and X3_satisfied is True and X2_satisfied is False and O2_satisfied is False:
+        if X1_satisfied and X3_satisfied and not X2_satisfied and not O2_satisfied:
             self.last_square = self.p2
             print(self.last_square)
             return self.last_square
@@ -143,28 +152,25 @@ two_in_line = [
 
 def hard_robot():
     for line in two_in_line:
-        if State.bot_turn == True:
+        if State.bot_turn:
             square_coord = line.check()
             if square_coord is not None:
                 button = State.buttons[square_coord]
                 button.set_square()
                 State.turn_count += 1
-    if State.bot_turn == True:
+    if State.bot_turn:
         if State.turn_count == 0:
             State.turn_count += 1
             button = State.buttons[2,2]
             if button.value is None:
                 button.set_square()
-                State.center_O = True
             else:
                 button = State.buttons[1, 1]
                 button.set_square()
-                State.center_O = False
 
         elif State.turn_count == 1:
             State.turn_count += 1
-            if State.center_O is True:
-                print (State.center_O)
+            if State.board[2,2] == "O":
                 button = State.buttons[2,3]
                 button.set_square()
             else:
@@ -208,10 +214,12 @@ class Square:
             # if the bot is active it is now it's turn
             if State.current_char == "X":
                 State.current_char = "O"
+                State.board[self.p] = {self}
                 State.X_points.append(self)
                 State.bot_turn = True
             else:
                 State.current_char = "X"
+                State.board[self.p] = {self}
                 State.O_points.append(self)
                 State.bot_turn = False
             # updates the label to be the current players turn
@@ -305,7 +313,7 @@ def check_win():
             show_winning_line(state)
             return
     # checks if all squares filled
-    if len(State.X_points) + len(State.O_points) == 9:
+    if len(State.board) == 9:
         # if grid filled end game and update label
         update_label("Draw")
         State.game_over = True
@@ -321,6 +329,7 @@ def reset_board():
     State.O_points = []
     State.game_over = False
     State.turn_count = 0
+    State.board.clear()
     update_label(f"Player {State.current_char} Turn")
 
 
