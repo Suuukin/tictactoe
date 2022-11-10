@@ -24,23 +24,32 @@ label.grid(row=0, column=0)
 play_area = tk.Frame(window, width=300, height=30, bg="honeydew2")
 play_area.grid(row=1, column=0)
 
-
-
 MARKER_X = "X"
 MARKER_O = "O"
-EMPTY = " "
+MARKER_EMPTY = " "
+
 # class to hold variables
 class State:
     current_char = "X"
-    board = {}
-    X_points = []
-    O_points = []
+    board = {} # {point: marker}
     game_over = False
     buttons = {}
     square = None
     robot_active = False
     bot_turn = False
     turn_count = 0
+
+
+LINES = [
+    [(1, 1), (1, 2), (1, 3)],
+    [(2, 1), (2, 2), (2, 3)],
+    [(3, 1), (3, 2), (3, 3)],
+    [(1, 1), (2, 1), (3, 1)],
+    [(1, 2), (2, 2), (3, 2)],
+    [(1, 3), (2, 3), (3, 3)],
+    [(1, 1), (2, 2), (3, 3)],
+    [(3, 1), (2, 2), (1, 3)]
+    ]
 
 
 # function to change label text cleaner
@@ -56,10 +65,12 @@ def start_O():
 
 
 def bot_selector():
-    if State.game_over is False:
+    if State.game_over is False: 
         if State.bot_turn is True:
             if State.robot_active == "Easy":
                 easy_robot()
+            elif State.robot_active == "Medium":
+                medium_robot()
             elif State.robot_active == "Hard":
                 hard_robot()
 
@@ -79,105 +90,95 @@ def easy_robot():
 
 
 class TwoInLine:
-    def __init__(self, p1, p2, p3):
+    def __init__(self, points):
         # takes point from inputted rows
-        self.points = [p1, p2, p3]
-        self.p1 = p1
-        self.p2 = p2
-        self.p3 = p3
+        self.points = points
 
-    def check(self):
-        X1_satisfied = False
-        X2_satisfied = False
-        X3_satisfied = False
-        O1_satisfied = False
-        O2_satisfied = False
-        O3_satisfied = False
-        self.last_square = None
-        for coord in State.board:
-            button = State.buttons[coord]
-            value = button.value
-            if value == "O":
-                if button.p == self.p1:
-                    O1_satisfied = True
-                elif button.p == self.p2:
-                    O2_satisfied = True
-                elif button.p == self.p3:
-                    O3_satisfied = True
-            if value == "X":
-                if button.p == self.p1:
-                    X1_satisfied = True
-                elif button.p == self.p2:
-                    X2_satisfied = True
-                elif button.p == self.p3:
-                    X3_satisfied = True
-        # returns results
-        if O1_satisfied and O2_satisfied and not X3_satisfied:
-            self.last_square = self.p3
-            print(self.last_square)
-            return self.last_square
-        if O2_satisfied and O3_satisfied and not X1_satisfied:
-            self.last_square = self.p1
-            print(self.last_square)
-            return self.last_square
-        if O1_satisfied and O3_satisfied and not X2_satisfied:
-            self.last_square = self.p2
-            print(self.last_square)
-            return self.last_square
-        if X1_satisfied and X2_satisfied and not X3_satisfied and not O3_satisfied:
-            self.last_square = self.p3
-            print(self.last_square)
-            return self.last_square
-        if X2_satisfied and X3_satisfied and not X1_satisfied and not O1_satisfied:
-            self.last_square = self.p1
-            print(self.last_square)
-            return self.last_square
-        if X1_satisfied and X3_satisfied and not X2_satisfied and not O2_satisfied:
-            self.last_square = self.p2
-            print(self.last_square)
-            return self.last_square
+    def check(self, marker):
+        markers = []
+        for p in self.points:
+            markers.append(State.board[p])
+        found = (
+            markers.count(MARKER_EMPTY) == 1 and markers.count(marker) == 2
+        )
+        free = (markers.count(MARKER_EMPTY) == 2 and markers.count(MARKER_X) == 1)
+        if found:
+            for p in self.points:
+                if State.board[p] == MARKER_EMPTY:
+                    return p
+        return None
 
 
-two_in_line = [
-    TwoInLine((1, 1), (1, 2), (1, 3)),
-    TwoInLine((2, 1), (2, 2), (2, 3)),
-    TwoInLine((3, 1), (3, 2), (3, 3)),
-    TwoInLine((1, 1), (2, 1), (3, 1)),
-    TwoInLine((1, 2), (2, 2), (3, 2)),
-    TwoInLine((1, 3), (2, 3), (3, 3)),
-    TwoInLine((1, 1), (2, 2), (3, 3)),
-    TwoInLine((3, 1), (2, 2), (1, 3)),
-    ]
+two_in_line = [TwoInLine(line) for line in LINES]
+    
 
-
-def hard_robot():
-    for line in two_in_line:
-        if State.bot_turn:
-            square_coord = line.check()
+def medium_robot():
+    if not State.bot_turn:
+        return
+    for marker in [MARKER_O, MARKER_X]:
+        for line in two_in_line:
+            square_coord = line.check(marker)
             if square_coord is not None:
                 button = State.buttons[square_coord]
                 button.set_square()
                 State.turn_count += 1
+                return
+    easy_robot()
+
+
+class FreeLine:
+    def __init__(self, points):
+        # takes point from inputted rows
+        self.points = points
+
+    def check(self, marker):
+        markers = []
+        for p in self.points:
+            markers.append(State.board[p])
+        free = (markers.count(MARKER_EMPTY) == 2 and markers.count(MARKER_X) == 1)
+        if free:
+            for p in self.points:
+                if State.board[p] == MARKER_EMPTY:
+                    return p
+        return None
+
+
+free_line = [FreeLine(line) for line in LINES]
+
+
+def hard_robot():
+    if not State.bot_turn:
+        return
+    for marker in [MARKER_O, MARKER_X]:
+        for line in two_in_line:
+            square_coord = line.check(marker)
+            if square_coord is not None:
+                button = State.buttons[square_coord]
+                button.set_square()
+                State.turn_count += 1
+                return
+    if not State.bot_turn:
+        return
+    if State.turn_count == 0:
+        State.turn_count += 1
+        if State.board[(2, 2)] == MARKER_EMPTY:
+            button = State.buttons[(2, 2)]
+            button.set_square()
+        else:
+            corners = [(1,1), (1,3), (3,1), (3,3)]
+            corner = random.choice(corners)
+            button = State.buttons[corner]
+            button.set_square()
+        return
     if State.bot_turn:
-        if State.turn_count == 0:
-            State.turn_count += 1
-            button = State.buttons[2,2]
-            if button.value is None:
+        for line in free_line:
+            square_coord = line.check(MARKER_O)
+            if square_coord is not None:
+                button = State.buttons[square_coord]
                 button.set_square()
-            else:
-                button = State.buttons[1, 1]
-                button.set_square()
-
-        elif State.turn_count == 1:
-            State.turn_count += 1
-            if State.board[2,2] == "O":
-                button = State.buttons[2,3]
-                button.set_square()
-            else:
-                button = State.buttons[1,3]
-                button.set_square()
-
-        easy_robot()
+                State.turn_count += 1
+                return
+    easy_robot()
     
 
 
@@ -214,13 +215,11 @@ class Square:
             # if the bot is active it is now it's turn
             if State.current_char == "X":
                 State.current_char = "O"
-                State.board[self.p] = {self}
-                State.X_points.append(self)
+                State.board[self.p] = MARKER_X
                 State.bot_turn = True
             else:
                 State.current_char = "X"
-                State.board[self.p] = {self}
-                State.O_points.append(self)
+                State.board[self.p] = MARKER_O
                 State.bot_turn = False
             # updates the label to be the current players turn
             update_label(f"Player {State.current_char} Turn")
@@ -228,42 +227,26 @@ class Square:
 
     def reset(self):
         # individual button clears it's label and value
-        self.button.configure(text="", bg="gainsboro")
+        self.button.configure(text=" ", bg="gainsboro")
         self.value = None
 
 
 # class to check if game is won
 class WinningStates:
-    def __init__(self, p1, p2, p3):
+    def __init__(self, points):
         # takes point from inputted rows
-        self.p1 = p1
-        self.p2 = p2
-        self.p3 = p3
+        self.points = points
 
-    def check(self, for_char):
-        p1_satisfied = False
-        p2_satisfied = False
-        p3_satisfied = False
+    def check(self):
+        markers = []
         # if X has all 3 points in the row
-        if for_char == "X":
-            for coord in State.X_points:
-                if coord.p == self.p1:
-                    p1_satisfied = True
-                elif coord.p == self.p2:
-                    p2_satisfied = True
-                elif coord.p == self.p3:
-                    p3_satisfied = True
-        # checks if O has all 3 points in the row
-        elif for_char == "O":
-            for coord in State.O_points:
-                if coord.p == self.p1:
-                    p1_satisfied = True
-                elif coord.p == self.p2:
-                    p2_satisfied = True
-                elif coord.p == self.p3:
-                    p3_satisfied = True
-        # returns results
-        return all([p1_satisfied, p2_satisfied, p3_satisfied])
+        for p in self.points:
+            markers.append(State.board[p])
+        if markers.count(MARKER_X) == 3:
+            return MARKER_X
+        if markers.count(MARKER_O) == 3:
+            return MARKER_O
+        return None
 
 
 # generates squares placed in grid
@@ -272,23 +255,15 @@ for x in range(1, 4):
     for y in range(1, 4):
         State.buttons[(x, y)] = State.square = Square(x, y)
         State.square.button.grid(row=x, column=y, sticky="nsew")
+        State.board[(x, y)] = MARKER_EMPTY # all points are empty
 
 # list containing all possible winning states
 # including diagonal, rows, and columns
-winning_states = [
-    WinningStates((1, 1), (1, 2), (1, 3)),
-    WinningStates((2, 1), (2, 2), (2, 3)),
-    WinningStates((3, 1), (3, 2), (3, 3)),
-    WinningStates((1, 1), (2, 1), (3, 1)),
-    WinningStates((1, 2), (2, 2), (3, 2)),
-    WinningStates((1, 3), (2, 3), (3, 3)),
-    WinningStates((1, 1), (2, 2), (3, 3)),
-    WinningStates((3, 1), (2, 2), (1, 3)),
-]
+winning_states = [WinningStates(line) for line in LINES]
 
 # if player has won color the winning points
 def show_winning_line(state):
-    for x, y in [(state.p1), (state.p2), (state.p3)]:
+    for x, y in state.points:
         # uses x,y to get points from dictionary
         square = State.buttons[(x, y)]
         # colors buttons retrieved from dictionary
@@ -300,20 +275,22 @@ def check_win():
     # checks through the winning_states list
     for state in winning_states:
         # checks each row for character X
-        if state.check("X"):
+        win_marker = state.check()
+        if win_marker == MARKER_X:
             # if X has winning state update label, winning line and end game
             update_label("Player X Wins")
             State.game_over = True
             show_winning_line(state)
             return
-        if state.check("O"):
+        if win_marker == MARKER_O:
             # if O has winning state update label, winning line and end game
             update_label("Player O Wins")
             State.game_over = True
             show_winning_line(state)
             return
     # checks if all squares filled
-    if len(State.board) == 9:
+    markers = set(State.board.values())
+    if MARKER_EMPTY not in markers:
         # if grid filled end game and update label
         update_label("Draw")
         State.game_over = True
@@ -325,11 +302,10 @@ def reset_board():
         State.square.reset()
     # update label and reset variables
     State.current_char = "X"
-    State.X_points = []
-    State.O_points = []
+    for p in State.board:
+        State.board[p] = MARKER_EMPTY
     State.game_over = False
     State.turn_count = 0
-    State.board.clear()
     update_label(f"Player {State.current_char} Turn")
 
 
@@ -343,6 +319,17 @@ def start_easy():
         # if easy bot active then deactivate
         State.robot_active = False
         update_label("Easy Bot Disabled")
+
+
+def start_medium():
+    reset_board()
+    if State.robot_active != "Medium":
+        State.robot_active = "Medium"
+        update_label("Medium Bot Active")
+    else:
+        # if easy bot active then deactivate
+        State.robot_active = False
+        update_label("Medium  Bot Disabled")
 
 
 def start_hard():
@@ -369,6 +356,7 @@ game_menu.add_separator()
 game_menu.add_command(label="Exit", command=window.destroy)
 AI_menu = tk.Menu(menubar, tearoff=0)
 AI_menu.add_command(label="Activate Easy Bot", command=start_easy)
+AI_menu.add_command(label="Actiate Medium Bot", command=start_medium)
 AI_menu.add_command(label="Activate Hard Bot", command=start_hard)
 menubar.add_cascade(label="Game", menu=game_menu)
 menubar.add_cascade(label="AI", menu=AI_menu)
