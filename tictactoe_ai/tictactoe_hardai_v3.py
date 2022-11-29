@@ -2,6 +2,8 @@ import tkinter as tk
 import tkinter.font as font
 import random
 
+# flake8:noqa
+
 MARKER_X = "X"
 MARKER_O = "O"
 MARKER_EMPTY = " "
@@ -33,6 +35,10 @@ class State:
 
     # number of turns played so far
     turn_count = 0
+
+    test_number = 0
+
+    test_done = False
 
 
 # List containing points of all possible winning lines (rows, columns,
@@ -74,9 +80,14 @@ def bot_selector():
             medium_robot()
         elif State.robot_active == "Hard":
             hard_robot()
+        elif State.robot_active == "Impossible":
+            impossible_bot()
+
 
 
 def easy_robot():
+    """Checks if random square is filled if not fill it.
+    If that square already filled generate a new one."""
     while State.bot_turn:
         # randomly generates a x,y point
         x = random.randint(1, 3)
@@ -104,9 +115,10 @@ def check_two_in_line(line, marker):
     return None
 
 
-def medium_robot():
-    if not State.bot_turn:
-        return
+def two_in_line():
+    """Runs check_two_in_line on all winning lines.
+    If any line with 2 of the same MARKER_X or MARKER_O in a row
+    place on the empty square."""
     for marker in [MARKER_O, MARKER_X]:
         for line in LINES:
             square_coord = check_two_in_line(line, marker)
@@ -115,6 +127,14 @@ def medium_robot():
                 button.set_square()
                 State.turn_count += 1
                 return
+
+
+def medium_robot():
+    """Searches for line to complete with 2 of the same Marker.
+    If it can't find any places randomly."""
+    if not State.bot_turn:
+        return
+    two_in_line()
     easy_robot()
 
 
@@ -128,73 +148,233 @@ def check_free_line(line, marker):
     potential_points = []
     if free:
         for p in line:
-            if p in CORNERS:
-                if State.board[p] == MARKER_EMPTY:
+            if State.board[p] == MARKER_EMPTY:
+                if p in CORNERS:
                     potential_points.append(p)
     return potential_points
 
 
+def free_line():
+    """Runs check_free_line on all winning lines."""
+    potential_points = []
+    for line in LINES:
+        # puts potential squares into dictionary
+        free = check_free_line(line, MARKER_O)
+        potential_points.extend(free)
+    if potential_points:
+        # randomly chooses from dictionary of squares
+        point = random.choice(potential_points)
+        button = State.buttons[point]
+        button.set_square()
+
+
+def first_move():
+    """Place center square if can't place on random side"""
+    State.turn_count += 1
+    # tries to place middle
+    if State.board[(2, 2)] == MARKER_EMPTY:
+        button = State.buttons[(2, 2)]
+        button.set_square()
+    else:
+        # if middle filled places in random corner
+        corner = random.choice(CORNERS)
+        button = State.buttons[corner]
+        button.set_square()
+    return
+
+
+def double_side_check():
+    """Checks if MARKER_X on two sides and if so places in corner inbetween"""
+    if State.board[1, 2] is MARKER_X and State.board[2, 1] is MARKER_X:
+        button = State.buttons[1, 1]
+        button.set_square()
+        State.turn_count += 1
+
+    if State.board[2, 3] is MARKER_X and State.board[3, 2] is MARKER_X:
+        button = State.buttons[3, 3]
+        button.set_square()
+        State.turn_count += 1
+
+    if State.board[1, 2] is MARKER_X and State.board[2, 3] is MARKER_X:
+        button = State.buttons[1, 3]
+        button.set_square()
+        State.turn_count += 1
+
+    if State.board[2, 1] is MARKER_X and State.board[3, 2] is MARKER_X:
+        button = State.buttons[3, 1]
+        button.set_square()
+        State.turn_count += 1
+
+
+def opposite_corner_check():
+    """Checks if MARKER_X in 2 opposite corners if so place MARKER_O on random side"""
+    if (
+        State.board[1, 1] is MARKER_X
+        and State.board[3, 3] is MARKER_X
+        or State.board[1, 3] is MARKER_X
+        and State.board[3, 1] is MARKER_X
+    ):
+        side = random.choice(SIDES)
+        button = State.buttons[side]
+        button.set_square()
+        State.turn_count += 1
+
+
 def hard_robot():
+    """Checks if there is a line to block.
+    Then places pre-planned moves depending on turn number.
+    Then checks if any line has an MARKER_O and 2 MARKER_EMPTY.
+    If none of these manage to place square, places randomly."""
     if not State.bot_turn:
         return
 
-    for marker in [MARKER_O, MARKER_X]:
-        for line in LINES:
-            square_coord = check_two_in_line(line, marker)
-            if square_coord is not None:
-                button = State.buttons[square_coord]
-                button.set_square()
-                State.turn_count += 1
-                return
-
-    if not State.bot_turn:
-        return
+    # checks if any player has 2 markers in a single line
+    # if so fill last square
+    two_in_line()
 
     if State.turn_count == 0:
-        State.turn_count += 1
-        if State.board[(2, 2)] == MARKER_EMPTY:
-            button = State.buttons[(2, 2)]
-            button.set_square()
-        else:
-            corner = random.choice(CORNERS)
-            button = State.buttons[corner]
-            button.set_square()
-        return
+        # tries to play middle if middle already filled
+        # places in random corner
+        first_move()
 
     if State.turn_count == 1:
-        if (
-            State.board[1, 1] is MARKER_X
-            and State.board[3, 3] is MARKER_X
-            or State.board[1, 3] is MARKER_X
-            and State.board[3, 1] is MARKER_X
-        ):
-            print("placing side")
-            side = random.choice(SIDES)
-            button = State.buttons[side]
-            button.set_square()
-            State.turn_count += 1
-
-        if State.board[1, 2] is MARKER_X and State.board[2, 1] is MARKER_X:
-            button = State.buttons[1, 1]
-            button.set_square()
-            State.turn_count += 1
-
-        if State.board[2, 3] is MARKER_X and State.board[3, 2] is MARKER_X:
-            button = State.buttons[3, 3]
-            button.set_square()
-            State.turn_count += 1
+        # checks if 2 MARKER_X in opposing corners
+        # if so places on random side
+        opposite_corner_check()
+        # checks if 2 MARKER_X in 2 sides diagonal to eachother
+        # if so places in the corner between them
+        double_side_check()
 
     if State.bot_turn:
-        potential_points = []
-        for line in LINES:
-            free = check_free_line(line, MARKER_O)
-            potential_points.extend(free)
-        if potential_points:
-            point = random.choice(potential_points)
-            button = State.buttons[point]
-            button.set_square()
+        # checks if any line has 1 MARKER_O and 2 MARKER_EMPTIES
+        # puts all squares from lines that meet criteria into dictionary
+        # randomly chooses square from dictionary to place
+        free_line()
 
+    # if none of the previous happened place randomly
     easy_robot()
+
+
+def corner_opposite_side_check():
+    if State.board[1, 1] is MARKER_X and State.board[2, 3] is MARKER_X:
+        button = State.buttons[1, 3]
+        button.set_square()
+    if State.board[3, 1] is MARKER_X and State.board[2, 3] is MARKER_X:
+        button = State.buttons[3, 3]
+        button.set_square()
+    if State.board[1, 3] is MARKER_X and State.board[2, 1] is MARKER_X:
+        button = State.buttons[1, 1]
+        button.set_square()
+    if State.board[3, 3] is MARKER_X and State.board[2, 1] is MARKER_X:
+        button = State.buttons[3, 1]
+        button.set_square()
+
+
+def impossible_bot():
+    """Checks if there is a line to block.
+    Then places pre-planned moves depending on turn number.
+    Then checks if any line has an MARKER_O and 2 MARKER_EMPTY.
+    If none of these manage to place square, places randomly."""
+    if not State.bot_turn:
+        return
+
+    # checks if any player has 2 markers in a single line
+    # if so fill last square
+    two_in_line()
+
+    if State.turn_count == 0:
+        # tries to play middle if middle already filled
+        # places in random corner
+        first_move()
+
+    if State.turn_count == 1:
+        # checks if 2 MARKER_X in opposing corners
+        # if so places on random side
+        opposite_corner_check()
+        # checks if 2 MARKER_X in 2 sides diagonal to eachother
+        # if so places in the corner between them
+        double_side_check()
+        corner_opposite_side_check()
+
+    if State.bot_turn:
+        # checks if any line has 1 MARKER_O and 2 MARKER_EMPTIES
+        # puts all squares from lines that meet criteria into dictionary
+        # randomly chooses square from dictionary to place
+        free_line()
+
+    # if none of the previous happened place randomly
+    easy_robot()
+
+
+def test_impossible():
+    random_turn = True
+    move_sequence = []  # (player, x, y)
+    while not State.game_over:
+        ROOT_WINDOW.update()  # Update the GUI
+        while random_turn is True:
+            # randomly generates a x,y point
+            x = random.randint(1, 3)
+            y = random.randint(1, 3)
+            point = (x, y)
+            # retrieves button from dict using the generated point
+            button = State.buttons[point]
+            # checks if the button has been clicked before
+            if button.value is None:
+                # if empty square bot fills square and ends turn
+                random_turn = False
+                button.set_square()
+                move_sequence.append(point)
+        if not State.game_over:
+            while random_turn is False:
+                random_turn = True
+                # checks if any player has 2 markers in a single line
+                # if so fill last square
+                two_in_line()
+
+                if State.turn_count == 0:
+                    # tries to play middle if middle already filled
+                    # places in random corner
+                    first_move()
+
+                if State.turn_count == 1:
+                    # checks if 2 MARKER_X in opposing corners
+                    # if so places on random side
+                    opposite_corner_check()
+                    # checks if 2 MARKER_X in 2 sides diagonal to eachother
+                    # if so places in the corner between them
+                    double_side_check()
+                    corner_opposite_side_check()
+
+                if State.bot_turn:
+                    # checks if any line has 1 MARKER_O and 2 MARKER_EMPTIES
+                    # puts all squares from lines that meet criteria into dictionary
+                    # randomly chooses square from dictionary to place
+                    free_line()
+
+                # if none of the previous happened place randomly
+                easy_robot()
+
+    if State.game_over:
+        State.test_number += 1
+        winner = random_win_check()
+        if winner is not None:
+            print(State.test_number, winner)
+        if winner == MARKER_X:
+            print(move_sequence)
+            State.test_done = True
+            return
+        else:
+            reset_board()
+            random_turn = True
+
+
+def random_win_check():
+    for line in LINES:
+        winner = check_win_state(line)
+        return winner
+
+
+# save me from github
 
 
 class Square:
@@ -214,21 +394,18 @@ class Square:
             pady=10,
         )
 
-    # operation that runs every time that a button is clicked
     def btn_op(self):
-        # checks if game is over
+        """operation that runs every time that a button is clicked"""
         if not State.game_over:
             self.set_square()
             bot_selector()
 
     def set_square(self):
-        # if button has been clicked before do nothing
+        """Sets button to current_char and swith to other player's turn"""
         if self.value is None:
             # if not clicked before set value to X or O and update label
             self.value = State.current_char
-            self.button.configure(
-                text=State.current_char, bg="ivory4", fg="black"
-            )
+            self.button.configure(text=State.current_char, bg="ivory4", fg="black")
             # if it's X's turn make it O's and add clicked square to list
             # if the bot is active it is now it's turn
             if State.current_char == "X":
@@ -252,7 +429,6 @@ class Square:
 def check_win_state(line):
     """check if game is won along 'line'"""
     markers = []
-    # if X has all 3 points in the row
     for p in line:
         markers.append(State.board[p])
     if markers.count(MARKER_X) == 3:
@@ -262,8 +438,8 @@ def check_win_state(line):
     return None
 
 
-# if player has won color the winning points
 def show_winning_line(line):
+    """if player has won color the winning points"""
     for x, y in line:
         # uses x,y to get points from dictionary
         square = State.buttons[(x, y)]
@@ -271,33 +447,31 @@ def show_winning_line(line):
         square.button.configure(bg="coral")
 
 
-# whenever a button is clicked run function
 def check_win():
+    """Checks if any line has 3 MARKER_X or MARKER_O if so set game_over = True"""
     for line in LINES:
-        # checks each row for character X
         win_marker = check_win_state(line)
         if win_marker == MARKER_X:
-            # if X has winning state update label, winning line and end game
+            # if X has won, update label, winning line, and end the game
             update_label("Player X Wins")
             State.game_over = True
             show_winning_line(line)
             return
         if win_marker == MARKER_O:
-            # if O has winning state update label, winning line and end game
+            # if O has winning state update label, winning line and end the game
             update_label("Player O Wins")
             State.game_over = True
             show_winning_line(line)
             return
-    # checks if all squares filled
     markers = set(State.board.values())
     if MARKER_EMPTY not in markers:
-        # if grid filled end game and update label
+        # if all squares are filled end game
         update_label("Draw")
         State.game_over = True
 
 
-# each button resets itself clearing its value and text
 def reset_board():
+    """Reset's all buttons and variables to default"""
     for square in State.buttons.values():
         square.reset()
     # update label and reset variables
@@ -309,45 +483,71 @@ def reset_board():
     update_label(f"Player {State.current_char} Turn")
 
 
-# activates and deactivates easy bot
 def start_easy():
+    """Reset's to default then activates easy bot if not active already"""
     reset_board()
     if State.robot_active != "Easy":
         State.robot_active = "Easy"
         update_label("Easy Bot Active")
     else:
-        # if easy bot active then deactivate
         State.robot_active = False
         update_label("Easy Bot Disabled")
 
 
 def start_medium():
+    """Reset's game and then activates medium bot if not active already"""
     reset_board()
     if State.robot_active != "Medium":
         State.robot_active = "Medium"
         update_label("Medium Bot Active")
     else:
-        # if easy bot active then deactivate
         State.robot_active = False
         update_label("Medium  Bot Disabled")
 
 
 def start_hard():
+    """Reset's game and then activates hard bot if not active already"""
     reset_board()
     if State.robot_active != "Hard":
         State.robot_active = "Hard"
         update_label("Hard Bot Active")
     else:
-        # if easy bot active then deactivate
         State.robot_active = False
         update_label("Hard Bot Disabled")
 
 
+def start_impossible():
+    """Reset's game and then activates impossible bot if not active already"""
+    reset_board()
+    if State.robot_active != "Impossible":
+        State.robot_active = "Impossible"
+        update_label("Impossible Bot Active")
+    else:
+        State.robot_active = False
+        update_label("Impossible Bot Disabled")
+
+
+def start_test():
+    reset_board()
+    if State.robot_active != "Test":
+        State.robot_active = "Test"
+        update_label("Test Impossible Active")
+        State.test_done = False
+        for i in range(1_000_000):
+            test_impossible()
+            if State.test_done:
+                break
+    else:
+        State.robot_active = False
+        update_label("Test Impossible Disabled")
+
+
 def main():
-    global MY_FONT, GRID_FONT
+    """Storing global variables"""
+    global MY_FONT, GRID_FONT, ROOT_WINDOW
 
     # creating window
-    window = tk.Tk()
+    ROOT_WINDOW = window = tk.Tk()
     window.resizable(False, False)
     window.title("Tic-Tac-Toe")
 
@@ -380,9 +580,7 @@ def main():
             State.board[(x, y)] = MARKER_EMPTY  # all points are empty
 
     # creating button to reset grid
-    reset_btn = tk.Button(
-        window, text="Reset", font=MY_FONT, command=reset_board
-    )
+    reset_btn = tk.Button(window, text="Reset", font=MY_FONT, command=reset_board)
     reset_btn.grid(row=2, column=0)
 
     # creating menubar
@@ -396,6 +594,8 @@ def main():
     AI_menu.add_command(label="Activate Easy Bot", command=start_easy)
     AI_menu.add_command(label="Actiate Medium Bot", command=start_medium)
     AI_menu.add_command(label="Activate Hard Bot", command=start_hard)
+    AI_menu.add_command(label="Activate Impossible Bot", command=start_impossible)
+    AI_menu.add_command(label="Test Impossible", command=start_test)
     menubar.add_cascade(label="Game", menu=game_menu)
     menubar.add_cascade(label="AI", menu=AI_menu)
 
@@ -404,5 +604,5 @@ def main():
     window.mainloop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
