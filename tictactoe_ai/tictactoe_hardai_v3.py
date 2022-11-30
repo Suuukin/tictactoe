@@ -54,8 +54,10 @@ LINES = [
     [(3, 1), (2, 2), (1, 3)],
 ]
 
+# global list of coordinates for all corners
 CORNERS = [(1, 1), (1, 3), (3, 1), (3, 3)]
 
+# global list of coordinates for all side squares
 SIDES = [(1, 2), (2, 1), (2, 3), (3, 2)]
 
 
@@ -94,7 +96,6 @@ def easy_robot():
         y = random.randint(1, 3)
         # retrieves button from dict using the generated point
         button = State.buttons[x, y]
-        print(x, y, button.value)
         # checks if the button has been clicked before
         if button.value is None:
             # if empty square bot fills square and ends turn
@@ -256,6 +257,8 @@ def hard_robot():
 
 
 def corner_opposite_side_check():
+    """Checks if the opponent has a corner and an opposing side, if so 
+    blocks them."""
     if State.board[1, 1] is MARKER_X and State.board[2, 3] is MARKER_X:
         button = State.buttons[1, 3]
         button.set_square()
@@ -307,7 +310,10 @@ def impossible_bot():
 
 
 def test_impossible():
+    """Plays random moves against the impossible bot to test 
+    if it's truly impossible. Runs until player X wins."""
     random_turn = True
+    # stores the move sequence of player X to store and replicate the winning moves
     move_sequence = []  # (player, x, y)
     while not State.game_over:
         ROOT_WINDOW.update()  # Update the GUI
@@ -323,6 +329,7 @@ def test_impossible():
                 # if empty square bot fills square and ends turn
                 random_turn = False
                 button.set_square()
+                # adds the played move to the list of winning moves
                 move_sequence.append(point)
         if not State.game_over:
             while random_turn is False:
@@ -355,15 +362,19 @@ def test_impossible():
                 easy_robot()
 
     if State.game_over:
-        State.test_number += 1
-        winner = random_win_check()
+        """When the game ends it checks win state (X Win, O Win, Draw) 
+        if player X wins than the loop breaks and prints the move sequence"""
+        State.test_number += 1 # increments for each finished game
+        winner = random_win_check() # checks for the winner
         if winner is not None:
             print(State.test_number, winner)
         if winner == MARKER_X:
+            # if X wins break loop
             print(move_sequence)
             State.test_done = True
             return
         else:
+            # if Draw or O wins restart
             reset_board()
             random_turn = True
 
@@ -372,10 +383,6 @@ def random_win_check():
     for line in LINES:
         winner = check_win_state(line)
         return winner
-
-
-# save me from github
-
 
 class Square:
     """A single square on the board, with button to press."""
@@ -421,7 +428,7 @@ class Square:
         check_win()
 
     def reset(self):
-        # individual button clears it's label and value
+        """Individual buttons clear and reset themselves."""
         self.button.configure(text=" ", bg="gainsboro")
         self.value = None
 
@@ -528,6 +535,7 @@ def start_impossible():
 
 
 def start_test():
+    """Starts the test then does 1 million trial runs or until player X wins"""
     reset_board()
     if State.robot_active != "Test":
         State.robot_active = "Test"
